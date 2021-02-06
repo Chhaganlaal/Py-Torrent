@@ -9,17 +9,16 @@ from util import *
 from urllib.parse import urlparse
 
 def udp_send(socket, message, url):
-    socket.sendto(message, (url.hostname, url.port))
+
+    socket.sendto(message, ('tracker.openbittorrent.com', url.port if url.port else 80))    # 80 for HTTP and 443 for HTTPS
 
 def resp_type(response):
+
     action = int(response[:4].hex(), 16)
 
     return 'connect' if action==0 else ('announce' if action==1 else None)
 
 def build_conn_req():
-    # buffer = bytes.fromhex('00000417')+bytes.fromhex('27101980')
-    # buffer = buffer + bytes.fromhex('00000000')
-    # buffer = buffer + os.urandom(4)
 
     buffer = (0x41727101980).to_bytes(8, 'big')
     buffer = buffer + (0).to_bytes(4, 'big')
@@ -28,6 +27,7 @@ def build_conn_req():
     return buffer
 
 def parse_conn_resp(response):
+
     ret = {
         'action': int(response[:4].hex(), 16),
         'transaction_id': int(response[4:8].hex(), 16),
@@ -68,6 +68,7 @@ def build_announce_req(connID, torrent, port=6881):
     return buffer
 
 def parse_announce_resp(response):
+
     def group(iterable, groupSize):
         groups = []
         for i in range(0, len(iterable), groupSize):
@@ -75,9 +76,10 @@ def parse_announce_resp(response):
         return groups
     
     def get_address(address):
+        # print(address, len(address))
         return {
             'ip': socket.inet_ntoa(address[0:4]),
-            'port': socket.inet_ntop(socket.AF_INET, address[4:])
+            'port': int(address[4:].hex(), 16)
         }
 
     ret = {
@@ -92,22 +94,23 @@ def parse_announce_resp(response):
     return ret
 
 def getPeers(torrent):
+
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-        url = urlparse(torrent[b'announce'].decode())
+
+        url = get_udp_tracker(torrent)
+        if not url:
+            print("No UDP tracker available")
+            exit()
         udp_send(sock, build_conn_req(), url)
 
-        print(torrent[b'info'][b'length'])
-        # sys.exit(0)
+        while True:
 
-        # while True:
-        response = sock.recv(4096)
+            response = sock.recv(4096)
 
-        if resp_type(response)=='connect':
-            conn_resp = parse_conn_resp(response)
-            announce_req = build_announce_req(conn_resp['connection_id'], torrent)
-            udp_send(sock, announce_req, url)
-        elif resp_type(response)=='announce':
-            print('response:', response, len(response))
-            announce_resp = parse_announce_resp(response)
-            print(announce_resp)
-            return announce_resp['peers']
+            if resp_type(response)=='connect':
+                conn_resp = parse_conn_resp(response)
+                announce_req = build_announce_req(conn_resp['connection_id'], torrent)
+                udp_send(sock, announce_req, url)
+            elif resp_type(response)=='announce':
+                announce_resp = parse_announce_resp(response)
+                return announce_resp['peers']

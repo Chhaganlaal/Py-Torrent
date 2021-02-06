@@ -1,3 +1,4 @@
 /package.json
-/puppy.torrent
+/*.torrent
+/temp.py
 __pycache__/
