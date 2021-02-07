@@ -8,9 +8,11 @@ import sys
 from util import *
 from urllib.parse import urlparse
 
-def udp_send(socket, message, url):
+def udp_send(sock, message, url):
 
-    socket.sendto(message, ('tracker.openbittorrent.com', url.port if url.port else 80))    # 80 for HTTP and 443 for HTTPS
+    # sock.sendall(message)
+    sock.sendto(message, (url.hostname, url.port if url.port else 80))    # 80 for HTTP and 443 for HTTPS
+    # sock.sendto(message, ('47.ip-51-68-199.eu', 6969))
 
 def resp_type(response):
 
@@ -97,6 +99,8 @@ def getPeers(torrent):
 
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
 
+        # url = urlparse(torrent[b'announce'].decode())
+        # sock.connect((url.hostname, url.port))
         url = get_udp_tracker(torrent)
         if not url:
             print("No UDP tracker available")
@@ -113,4 +117,5 @@ def getPeers(torrent):
                 udp_send(sock, announce_req, url)
             elif resp_type(response)=='announce':
                 announce_resp = parse_announce_resp(response)
+                print(announce_resp)
                 return announce_resp['peers']

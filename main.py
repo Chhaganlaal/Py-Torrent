@@ -2,9 +2,12 @@ import base64
 import bencodepy
 import socket
 import sys
-import tracker
-import download
+
 from urllib.parse import urlparse
+
+import tracker
+import peer_node
+import client_node
 
 bc = bencodepy.Bencode(encoding=None)
 
@@ -12,10 +15,14 @@ with open('Beast With It.torrent', 'rb') as f:
 
     torrent = bencodepy.bread(f)
     print(torrent)
-    # print(torrent[b'info'][b'piece length'])
+    # print(len(torrent[b'info'][b'pieces']))
     peers = tracker.getPeers(torrent)
 
-    # print(peers)
+    client = client_node.Client(torrent)
 
-    # for peer in peers:
-    download.download(peers[0], torrent)
+    peer = peer_node.Peer(peers[13], torrent)
+    peer.download(client)
+
+    # for peer_ in peers:
+    #     peer = peer_node.Peer(peer_, torrent)
+    #     peer.download(client)
