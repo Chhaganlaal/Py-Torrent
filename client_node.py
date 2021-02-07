@@ -34,3 +34,18 @@ class Client(object):
     def is_done(self):
 
         return all(all(piece) for piece in self.__received)
+
+    def print_progress(self):
+
+        downloaded = 0
+        total = 0
+
+        for piece in self.__received:
+            for block in piece:
+                if block:
+                    downloaded += 1
+                total += 1
+
+        progress = (downloaded*100)//total
+
+        print("progress:", progress, end='\n\n')

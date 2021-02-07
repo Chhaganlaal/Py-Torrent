@@ -17,6 +17,7 @@ class Peer(object):
         try:
             self.__sock.connect((self.__host, self.__port))
             print("Connection with peer '%s' successful\n" %(self.__host))
+            self.__sock.settimeout(5)
         except:
             print("Could not connect to:", self.__host)
             return
@@ -29,7 +30,7 @@ class Peer(object):
         handshake = message.build_handshake(self.__torrent)
         self.__sock.sendall(handshake)
         data = self.__sock.recv(4096)
-        print(data)
+        # print(data)
         
         if not self.is_handshake(data):
             print("Handshake not Received!!!")
@@ -39,19 +40,27 @@ class Peer(object):
 
         saved = bytes(0)
         msg_len = 0
+        # f = open('./temp.txt', 'w')
         while True:
             # try:
             msg = self.__sock.recv(4096)
             msg_len = int(msg[0:4].hex(), 16) + 4
-            print(msg, msg_len)
+            # print(msg, msg_len)
+            # f.write(f'{msg_len}\n')
+            # f.write('saved:' + str(saved) + 'message:' + str(msg) + '\n')
             saved = saved + msg
+            # f.write('saved:' + str(saved) + 'message:' + str(msg) + '\n')
 
-            while len(saved)>=4 and len(saved)>=msg_len:
+            while len(saved)>=4 and len(saved)>=(int(saved[0:4].hex(), 16)+4):
+                # f.write(f'{len(saved)}\n')
                 msg_len = int(saved[0:4].hex(), 16) + 4
                 self.msg_handler(saved[:msg_len], client)
                 saved = saved[msg_len:]
+                # f.write(f'{len(saved)} \n\n')
+        # f.close()
             # except:
-            #     break
+            #     f.close()
+            #     exit(0)
     
     '''
     Message Handlers
@@ -59,9 +68,9 @@ class Peer(object):
 
     def msg_handler(self, msg, client):
 
-        print('handler:', msg)
+        # print('handler:', msg)
         msg = message.parse_message(msg)
-        print(msg)
+        # print(msg)
 
         # self.__sock.close()
 
@@ -99,7 +108,6 @@ class Peer(object):
 
         bits = bin(int(payload.hex(), 16))[2:]
         bits = '0'*(get_number_of_pieces(self.__torrent)-len(bits)) + bits
-        print(bits, len(bits))
         for i, bit in enumerate(bits):
             if bit=='1':
                 self.__queue.push(i)
@@ -108,6 +116,8 @@ class Peer(object):
             self.request_piece(client)
 
     def piece_handler(self, payload, client):
+
+        client.print_progress()
 
         client.add_received(payload)
         
@@ -127,6 +137,7 @@ class Peer(object):
             print(self.__queue.length())
 
             if client.needed(piece_block):
+                print('Needed')
                 self.__sock.sendall(message.build_request(piece_block))
                 client.add_requested(piece_block)
                 break

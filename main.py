@@ -14,13 +14,13 @@ bc = bencodepy.Bencode(encoding=None)
 with open('Beast With It.torrent', 'rb') as f:
 
     torrent = bencodepy.bread(f)
-    print(torrent)
+    # print(torrent)
     # print(len(torrent[b'info'][b'pieces']))
     peers = tracker.getPeers(torrent)
 
     client = client_node.Client(torrent)
 
-    peer = peer_node.Peer(peers[13], torrent)
+    peer = peer_node.Peer(peers[16], torrent)
     peer.download(client)
 
     # for peer_ in peers:

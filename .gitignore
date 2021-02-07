@@ -1,4 +1,5 @@
 /package.json
 /*.torrent
 /temp.py
+/temp.txt
 __pycache__/
