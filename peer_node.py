@@ -116,6 +116,8 @@ class Peer(object):
         offset = payload['index']*self.__torrent[b'info'][b'piece length'] + payload['begin']
         client.stream.seek(offset)
         client.stream.write(payload['block'])
+        
+        client.write_to_file(payload, self.__torrent)
 
         client.add_received(payload)
         

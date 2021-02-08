@@ -7,6 +7,20 @@ class Client(object):
 
     def __init__(self, torrent):
 
+        self.files = []
+        prev = 0
+        for file_ in torrent[b'info'][b'files']:
+            temp = {}
+            temp['length'] = file_[b'length']
+            try:
+                temp['descriptor'] = open(os.path.join("downloaded".encode(), *file_[b'path']), 'r+b')
+            except:
+                temp['descriptor'] = open(os.path.join("downloaded".encode(), *file_[b'path']), 'w+b')
+            temp['offset'] = prev
+            prev += temp['length']
+            print(temp['offset'])
+            self.files.append(temp)
+
         try:
             self.stream = open("pieces.sav", 'r+b')
         except:
@@ -73,3 +87,21 @@ class Client(object):
             self.__received = pickle.load(f)
             self.__requested = deepcopy(self.__received)
 
+    def write_to_file(self, payload, torrent):
+
+        offset = payload['index']*torrent[b'info'][b'piece length'] + payload['begin']
+        offset_end = offset + len(payload['block'])
+
+        temp = open("temp.txt", 'a')
+
+        for file_ in self.files:
+            start = file_['offset']
+            end = file_['offset'] + file_['length']
+            temp.writelines(f'{offset} {offset_end} {start} {end}\n')
+            if offset>=start and offset<end:
+                file_['descriptor'].seek(offset-start)
+                file_['descriptor'].write(payload['block'][len(payload['block'])-(offset_end-offset):len(payload['block'])-(offset_end-min(end, offset_end))])
+                offset = min(end, offset_end)
+
+            if offset>=offset_end:
+                break
