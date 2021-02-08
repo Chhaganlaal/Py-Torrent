@@ -149,7 +149,7 @@ def parse_message(message):
             'begin': int(payload[4:8].hex(), 16)
         }
 
-        payload[('block' if id==7 else 'length')] = rest
+        payload[('block' if msg_id==7 else 'length')] = rest
 
     return {
         'size': int(message[0:4].hex(), 16),

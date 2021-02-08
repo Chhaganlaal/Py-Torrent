@@ -1,5 +1,6 @@
 import bencodepy
 import socket
+import sys
 import message
 import job_queue
 from copy import deepcopy
@@ -40,27 +41,20 @@ class Peer(object):
 
         saved = bytes(0)
         msg_len = 0
-        # f = open('./temp.txt', 'w')
         while True:
-            # try:
-            msg = self.__sock.recv(4096)
-            msg_len = int(msg[0:4].hex(), 16) + 4
-            # print(msg, msg_len)
-            # f.write(f'{msg_len}\n')
-            # f.write('saved:' + str(saved) + 'message:' + str(msg) + '\n')
-            saved = saved + msg
-            # f.write('saved:' + str(saved) + 'message:' + str(msg) + '\n')
+            try:
+                msg = self.__sock.recv(4096)
+                msg_len = int(msg[0:4].hex(), 16) + 4
+                saved = saved + msg
 
-            while len(saved)>=4 and len(saved)>=(int(saved[0:4].hex(), 16)+4):
-                # f.write(f'{len(saved)}\n')
-                msg_len = int(saved[0:4].hex(), 16) + 4
-                self.msg_handler(saved[:msg_len], client)
-                saved = saved[msg_len:]
-                # f.write(f'{len(saved)} \n\n')
-        # f.close()
-            # except:
-            #     f.close()
-            #     exit(0)
+                while len(saved)>=4 and len(saved)>=(int(saved[0:4].hex(), 16)+4):
+                    msg_len = int(saved[0:4].hex(), 16) + 4
+                    self.msg_handler(saved[:msg_len], client)
+                    saved = saved[msg_len:]
+            except socket.error as e:
+                print(e.with_traceback(sys.exc_info()[2]))
+                client.dump_received()
+                break
     
     '''
     Message Handlers
@@ -118,11 +112,16 @@ class Peer(object):
     def piece_handler(self, payload, client):
 
         client.print_progress()
+        
+        offset = payload['index']*self.__torrent[b'info'][b'piece length'] + payload['begin']
+        client.stream.seek(offset)
+        client.stream.write(payload['block'])
 
         client.add_received(payload)
         
         if client.is_done():
             self.__sock.close()
+            client.stream.close()
             print("DONE!!!")
         else:
             self.request_piece(client)
@@ -137,7 +136,7 @@ class Peer(object):
             print(self.__queue.length())
 
             if client.needed(piece_block):
-                print('Needed')
+                print("Needed", piece_block['index'])
                 self.__sock.sendall(message.build_request(piece_block))
                 client.add_requested(piece_block)
                 break

@@ -30,7 +30,8 @@ def get_torrent_length(torrent):
 
     if b'files' in torrent[b'info']:
         size = 0
-        map(lambda l: size+l[b'length'], torrent[b'info'][b'files'])
+        for file_ in torrent[b'info'][b'files']:
+            size += file_[b'length']
     else:
         size = torrent[b'info'][b'length']
 
@@ -73,11 +74,14 @@ def piece_len(torrent, piece_index):
     last_piece_length = total_length % piece_length
     last_piece_index = math.floor(total_length/piece_length)
 
+    # print(total_length, ':', get_torrent_length(torrent), end=' : ')
+    # print(piece_index, ':', last_piece_index, end=' : ')
     return last_piece_length if last_piece_index==piece_index else piece_length
 
 def blocks_per_piece(torrent, piece_index):
 
     piece_length = piece_len(torrent, piece_index)
+    # print(piece_index, ':', piece_length)
 
     return math.ceil(piece_length/BLOCK_LENGTH)
 
