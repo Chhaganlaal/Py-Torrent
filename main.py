@@ -1,5 +1,6 @@
 import base64
 import bencodepy
+import os
 import socket
 import sys
 
@@ -11,19 +12,18 @@ import client_node
 
 bc = bencodepy.Bencode(encoding=None)
 
-with open("Beast With It.torrent", 'rb') as f:
+with open("The_Night_We_Met.torrent", 'rb') as f:
 
     torrent = bencodepy.bread(f)
     # print(torrent)
-    # print(len(torrent[b'info'][b'pieces']))
-    peers = tracker.getPeers(torrent)
+    # exit()
 
     client = client_node.Client(torrent)
-    print(torrent)
+    peers = tracker.getPeers(torrent)
 
     peer = peer_node.Peer(peers[0], torrent)
     peer.download(client)
 
-    # for peer_ in peers:
-    #     peer = peer_node.Peer(peer_, torrent)
-    #     peer.download(client)
+    if client.is_done():
+        client.stream.close()
+        os.remove("received.sav")

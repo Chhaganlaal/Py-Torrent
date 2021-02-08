@@ -12,7 +12,7 @@ def gen_id():
 
     global torrent_id
     if not torrent_id:
-        torrent_id = '-AT0001-'
+        torrent_id = '-DM0001-'
         torrent_id = torrent_id.encode() + os.urandom(20-len(torrent_id))
     return torrent_id
 

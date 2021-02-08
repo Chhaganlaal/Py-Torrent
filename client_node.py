@@ -8,18 +8,6 @@ class Client(object):
     def __init__(self, torrent):
 
         self.files = []
-        prev = 0
-        for file_ in torrent[b'info'][b'files']:
-            temp = {}
-            temp['length'] = file_[b'length']
-            try:
-                temp['descriptor'] = open(os.path.join("downloaded".encode(), *file_[b'path']), 'r+b')
-            except:
-                temp['descriptor'] = open(os.path.join("downloaded".encode(), *file_[b'path']), 'w+b')
-            temp['offset'] = prev
-            prev += temp['length']
-            print(temp['offset'])
-            self.files.append(temp)
 
         try:
             self.stream = open("pieces.sav", 'r+b')
@@ -31,6 +19,8 @@ class Client(object):
             arr = [[False for j in range(blocks_per_piece(torrent, i))] for i in range(number_of_pieces)]
             return arr
 
+        self.__get_file_info(torrent)
+
         try:
             self.load_received()
         except:
@@ -38,6 +28,30 @@ class Client(object):
             self.__requested = build_array()
 
             # print(self.__received)
+
+    def __get_file_info(self, torrent):
+        
+        if b'files' in torrent[b'info']:
+            prev = 0
+            for file_ in torrent[b'info'][b'files']:
+                temp = {}
+                temp['length'] = file_[b'length']
+                try:
+                    temp['descriptor'] = open(os.path.join("downloaded".encode(), *file_[b'path']), 'r+b')
+                except:
+                    temp['descriptor'] = open(os.path.join("downloaded".encode(), *file_[b'path']), 'w+b')
+                temp['offset'] = prev
+                prev += temp['length']
+                self.files.append(temp)
+        else:
+            temp = {}
+            temp['length'] = torrent[b'info'][b'length']
+            try:
+                temp['descriptor'] = open(os.path.join("downloaded".encode(), torrent[b'info'][b'name']), 'r+b')
+            except:
+                temp['descriptor'] = open(os.path.join("downloaded".encode(), torrent[b'info'][b'name']), 'w+b')
+            temp['offset'] = 0
+            self.files.append(temp)
 
     def add_requested(self, piece_block):
 
@@ -74,7 +88,7 @@ class Client(object):
 
         progress = (downloaded*100)//total
 
-        print("progress:", progress, end='\n\n')
+        print("progress:", progress, end='\r')
 
     def dump_received(self):
 

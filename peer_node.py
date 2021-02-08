@@ -135,10 +135,8 @@ class Peer(object):
 
         while self.__queue.length()>0:
             piece_block = self.__queue.poll()
-            print(self.__queue.length())
 
             if client.needed(piece_block):
-                print("Needed", piece_block['index'])
                 self.__sock.sendall(message.build_request(piece_block))
                 client.add_requested(piece_block)
                 break
