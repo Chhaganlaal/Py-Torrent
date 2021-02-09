@@ -24,8 +24,11 @@ with open(args.torrent_path, 'rb') as f:
 
     print("Peer List:\n", peer_list)
 
-    peer = peer_node.Peer(peer_list[3], torrent, args)
-    peer.download(client)
+    for item in peer_list:
+        peer = peer_node.Peer(item, torrent, args)
+        peer.download(client)
+        if client.is_done():
+            break
 
     if client.is_done():
         if args.method==2:
