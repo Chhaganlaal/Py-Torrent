@@ -1,19 +1,17 @@
-import bencodepy
 import socket
-import sys
 import message
 import job_queue
-from copy import deepcopy
 from util import *
 
 class Peer(object):
     
-    def __init__(self, address, torrent):
+    def __init__(self, address, torrent, args):
 
         self.__host = address['ip']
         self.__port = address['port']
         self.__torrent = torrent
         self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.method = args.method
 
         try:
             self.__sock.connect((self.__host, self.__port))
@@ -27,16 +25,17 @@ class Peer(object):
 
     def download(self, client):
 
-        print("Establishing handshake...\n")
+        # print("Establishing handshake...\n")
         handshake = message.build_handshake(self.__torrent)
         self.__sock.sendall(handshake)
         data = self.__sock.recv(4096)
-        # print(data)
         
         if not self.is_handshake(data):
-            print("Handshake not Received!!!")
-            exit()
+            # print("Handshake not Received!!!")
+            self.__sock.close()
+            return
         else:
+            # print("Handshake Acknowledged\n")
             self.__sock.sendall(message.build_interested())
 
         saved = bytes(0)
@@ -51,8 +50,7 @@ class Peer(object):
                     msg_len = int(saved[0:4].hex(), 16) + 4
                     self.msg_handler(saved[:msg_len], client)
                     saved = saved[msg_len:]
-            except socket.error as e:
-                print(e.with_traceback(sys.exc_info()[2]))
+            except socket.error:
                 client.dump_received()
                 break
     
@@ -62,11 +60,7 @@ class Peer(object):
 
     def msg_handler(self, msg, client):
 
-        # print('handler:', msg)
         msg = message.parse_message(msg)
-        # print(msg)
-
-        # self.__sock.close()
 
         if msg['id']==0: self.choke_handler()
         elif msg['id']==1: self.unchoke_handler(client)
@@ -113,18 +107,19 @@ class Peer(object):
 
         client.print_progress()
         
-        offset = payload['index']*self.__torrent[b'info'][b'piece length'] + payload['begin']
-        client.stream.seek(offset)
-        client.stream.write(payload['block'])
-        
-        client.write_to_file(payload, self.__torrent)
+        if self.method==1:
+            client.piece_to_file(payload, self.__torrent)
+        elif self.method==2:
+            offset = payload['index']*self.__torrent[b'info'][b'piece length'] + payload['begin']
+            client.stream.seek(offset)
+            client.stream.write(payload['block'])
 
         client.add_received(payload)
         
         if client.is_done():
             self.__sock.close()
-            client.stream.close()
-            print("DONE!!!")
+            print("Progress:", 100)
+            print("\nDownload Complete!!!")
         else:
             self.request_piece(client)
 

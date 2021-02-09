@@ -1,18 +1,11 @@
-import base64
-import bencodepy
-import json
 import os
 import socket
-import hashlib
-import sys
 from util import *
 from urllib.parse import urlparse
 
 def udp_send(sock, message, url):
 
-    # sock.sendall(message)
-    sock.sendto(message, (url.hostname, url.port if url.port else 80))    # 80 for HTTP and 443 for HTTPS
-    # sock.sendto(message, ('47.ip-51-68-199.eu', 6969))
+    sock.sendto(message, (url.hostname, url.port))    # 80 for HTTP and 443 for HTTPS
 
 def resp_type(response):
 
@@ -23,8 +16,8 @@ def resp_type(response):
 def build_conn_req():
 
     buffer = (0x41727101980).to_bytes(8, 'big')
-    buffer = buffer + (0).to_bytes(4, 'big')
-    buffer = buffer + os.urandom(4)
+    buffer += (0).to_bytes(4, 'big')
+    buffer += os.urandom(4)
 
     return buffer
 
@@ -43,42 +36,43 @@ def build_announce_req(connID, torrent, port=6881):
     # Connection ID
     buffer = connID
     # Action
-    buffer = buffer + (1).to_bytes(4, 'big')
+    buffer += (1).to_bytes(4, 'big')
     # Transaction ID
-    buffer = buffer + os.urandom(4)
+    buffer += os.urandom(4)
     # Info Hash
-    buffer = buffer + get_info_hash(torrent)
+    buffer += get_info_hash(torrent)
     # Peer ID
-    buffer = buffer + gen_id()
+    buffer += gen_id()
     # Downloaded
-    buffer = buffer + (0).to_bytes(8, 'big')
+    buffer += (0).to_bytes(8, 'big')
     # Left
-    buffer = buffer + get_torrent_length(torrent)
+    buffer += get_torrent_length(torrent)
     # Uploaded
-    buffer = buffer + (0).to_bytes(8, 'big')
+    buffer += (0).to_bytes(8, 'big')
     # Event
-    buffer = buffer + (0).to_bytes(4, 'big')
+    buffer += (0).to_bytes(4, 'big')
     # IP Address
-    buffer = buffer + (0).to_bytes(4, 'big')
+    buffer += (0).to_bytes(4, 'big')
     # Key
-    buffer = buffer + os.urandom(4)
+    buffer += os.urandom(4)
     # Num Want
-    buffer = buffer + (0).to_bytes(4, 'big')
+    buffer += (0).to_bytes(4, 'big')
     # Port
-    buffer = buffer + (port).to_bytes(2, 'big')
+    buffer += (port).to_bytes(2, 'big')
 
     return buffer
 
 def parse_announce_resp(response):
 
     def group(iterable, groupSize):
+
         groups = []
         for i in range(0, len(iterable), groupSize):
             groups.append(iterable[i: i+groupSize])
         return groups
     
     def get_address(address):
-        # print(address, len(address))
+
         return {
             'ip': socket.inet_ntoa(address[0:4]),
             'port': int(address[4:].hex(), 16)
@@ -99,8 +93,6 @@ def getPeers(torrent):
 
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
 
-        # url = urlparse(torrent[b'announce'].decode())
-        # sock.connect((url.hostname, url.port))
         url = get_udp_tracker(torrent)
         if not url:
             print("No UDP tracker available")
@@ -117,5 +109,4 @@ def getPeers(torrent):
                 udp_send(sock, announce_req, url)
             elif resp_type(response)=='announce':
                 announce_resp = parse_announce_resp(response)
-                print(announce_resp)
                 return announce_resp['peers']

@@ -5,14 +5,18 @@ from util import *
 
 class Client(object):
 
-    def __init__(self, torrent):
+    def __init__(self, torrent, args):
 
+        self.save_path = os.path.join(args.save_path, os.path.basename(os.path.splitext(args.torrent_path)[0])).encode()
+        if not os.path.exists(self.save_path):
+            os.makedirs(self.save_path)
         self.files = []
 
-        try:
-            self.stream = open("pieces.sav", 'r+b')
-        except:
-            self.stream = open("pieces.sav", 'w+b')
+        if args.method==2:
+            try:
+                self.stream = open("pieces.sav", 'r+b')
+            except:
+                self.stream = open("pieces.sav", 'w+b')
 
         def build_array():
             number_of_pieces = get_number_of_pieces(torrent)
@@ -27,8 +31,6 @@ class Client(object):
             self.__received = build_array()
             self.__requested = build_array()
 
-            # print(self.__received)
-
     def __get_file_info(self, torrent):
         
         if b'files' in torrent[b'info']:
@@ -37,9 +39,9 @@ class Client(object):
                 temp = {}
                 temp['length'] = file_[b'length']
                 try:
-                    temp['descriptor'] = open(os.path.join("downloaded".encode(), *file_[b'path']), 'r+b')
+                    temp['descriptor'] = open(os.path.join(self.save_path, *file_[b'path']), 'r+b')
                 except:
-                    temp['descriptor'] = open(os.path.join("downloaded".encode(), *file_[b'path']), 'w+b')
+                    temp['descriptor'] = open(os.path.join(self.save_path, *file_[b'path']), 'w+b')
                 temp['offset'] = prev
                 prev += temp['length']
                 self.files.append(temp)
@@ -47,9 +49,9 @@ class Client(object):
             temp = {}
             temp['length'] = torrent[b'info'][b'length']
             try:
-                temp['descriptor'] = open(os.path.join("downloaded".encode(), torrent[b'info'][b'name']), 'r+b')
+                temp['descriptor'] = open(os.path.join(self.save_path, torrent[b'info'][b'name']), 'r+b')
             except:
-                temp['descriptor'] = open(os.path.join("downloaded".encode(), torrent[b'info'][b'name']), 'w+b')
+                temp['descriptor'] = open(os.path.join(self.save_path, torrent[b'info'][b'name']), 'w+b')
             temp['offset'] = 0
             self.files.append(temp)
 
@@ -86,9 +88,9 @@ class Client(object):
                     downloaded += 1
                 total += 1
 
-        progress = (downloaded*100)//total
+        progress = math.ceil(downloaded*100)//total
 
-        print("progress:", progress, end='\r')
+        print("Progress:", progress, end='\r')
 
     def dump_received(self):
 
@@ -101,7 +103,7 @@ class Client(object):
             self.__received = pickle.load(f)
             self.__requested = deepcopy(self.__received)
 
-    def write_to_file(self, payload, torrent):
+    def piece_to_file(self, payload, torrent):
 
         offset = payload['index']*torrent[b'info'][b'piece length'] + payload['begin']
         offset_end = offset + len(payload['block'])
@@ -119,3 +121,9 @@ class Client(object):
 
             if offset>=offset_end:
                 break
+
+    def write_to_file(self):
+
+        for file_ in self.files:
+            self.stream.seek(file_['offset'])
+            file_['descriptor'].write(self.stream.read(file_['length']))

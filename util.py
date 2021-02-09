@@ -20,9 +20,7 @@ def get_info_hash(torrent):
 
     info = bencodepy.encode(torrent[b'info'])
     hexdigest = hashlib.sha1(info).hexdigest()
-    # print(hexdigest)
     info_hash = bytes.fromhex(hexdigest)
-    # print(info_hash)
 
     return info_hash
 
@@ -74,14 +72,11 @@ def piece_len(torrent, piece_index):
     last_piece_length = total_length % piece_length
     last_piece_index = math.floor(total_length/piece_length)
 
-    # print(total_length, ':', get_torrent_length(torrent), end=' : ')
-    # print(piece_index, ':', last_piece_index, end=' : ')
     return last_piece_length if last_piece_index==piece_index else piece_length
 
 def blocks_per_piece(torrent, piece_index):
 
     piece_length = piece_len(torrent, piece_index)
-    # print(piece_index, ':', piece_length)
 
     return math.ceil(piece_length/BLOCK_LENGTH)
 
@@ -104,5 +99,3 @@ def get_bits(hex_val):
         int_val = int(int_val//2)
 
     return ret
-
-# print(gen_id())

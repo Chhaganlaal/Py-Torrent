@@ -1,6 +1,3 @@
-import os
-import socket
-import sys
 from util import get_info_hash, gen_id
 
 def build_handshake(torrent):
@@ -19,8 +16,7 @@ def build_handshake(torrent):
     return buffer
 
 def build_keep_alive():
-
-    buffer = (0).to_bytes(4, 'big')
+    pass
 
 def build_choke():
 
